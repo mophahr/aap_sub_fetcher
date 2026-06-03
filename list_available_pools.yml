@@ -1,0 +1,79 @@
+---
+# This playbook queries the Red Hat Subscription API to list available pools.
+# Use this to find the pool ID for AAP subscriptions.
+#
+# NOTE: Requires Red Hat Customer Portal username/password (basic auth).
+# Does not work with internal SSO.
+
+- name: List available subscription pools
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    rhsm_api_base: "https://subscription.rhsm.redhat.com"
+    pool_filter: "Ansible Automation Platform"
+    validate_certs: false  # Set to true if not behind corporate proxy
+    hide_empty_pools: true  # Set to false to show pools with 0 availability
+
+  vars_prompt:
+    - name: rhsm_username
+      prompt: "Enter your Red Hat Customer Portal username"
+      private: false
+
+    - name: rhsm_password
+      prompt: "Enter your Red Hat Customer Portal password"
+      private: true
+
+  tasks:
+    - name: Get RHSM owner key
+      ansible.builtin.uri:
+        url: "{{ rhsm_api_base }}/subscription/users/{{ rhsm_username }}/owners"
+        method: GET
+        user: "{{ rhsm_username }}"
+        password: "{{ rhsm_password }}"
+        force_basic_auth: true
+        validate_certs: "{{ validate_certs }}"
+        return_content: true
+        headers:
+          Accept: "application/json"
+      register: owner_response
+      no_log: true
+
+    - name: Set owner key
+      ansible.builtin.set_fact:
+        owner_key: "{{ owner_response.json[0].key }}"
+
+    - name: Get available pools
+      ansible.builtin.uri:
+        url: "{{ rhsm_api_base }}/subscription/owners/{{ owner_key }}/pools"
+        method: GET
+        user: "{{ rhsm_username }}"
+        password: "{{ rhsm_password }}"
+        force_basic_auth: true
+        validate_certs: "{{ validate_certs }}"
+        return_content: true
+        headers:
+          Accept: "application/json"
+      register: pools_response
+      no_log: true
+
+    - name: Filter pools for AAP
+      ansible.builtin.set_fact:
+        aap_pools_all: "{{ pools_response.json | selectattr('productName', 'search', pool_filter, ignorecase=True) | list }}"
+
+    - name: Filter out empty pools
+      ansible.builtin.set_fact:
+        aap_pools: "{{ aap_pools_all | json_query('[?quantity > consumed]') if hide_empty_pools else aap_pools_all }}"
+
+    - name: Display AAP pools
+      ansible.builtin.debug:
+        msg: "{{ pool.productName }} | Pool ID: {{ pool.id }} | Available: {{ pool.quantity - pool.consumed }}/{{ pool.quantity }} | {{ pool.supportLevel | default('N/A') }}"
+      loop: "{{ aap_pools }}"
+      loop_control:
+        loop_var: pool
+        label: "{{ pool.productName }}"
+
+    - name: Show summary
+      ansible.builtin.debug:
+        msg: "Found {{ aap_pools | length }} AAP pool(s) out of {{ pools_response.json | length }} total"

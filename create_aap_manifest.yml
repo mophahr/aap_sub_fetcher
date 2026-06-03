@@ -1,0 +1,51 @@
+---
+# This playbook creates a manifest via the Red Hat Customer Portal API.
+# It requires username/password credentials (basic auth).
+
+- name: Create AAP manifest and download
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    manifest_name: "aap_sub_fetcher-test"
+    manifest_uuid: ""  # Optional: specify UUID to use existing manifest
+    manifest_path: "{{ playbook_dir }}/aap_sub_fetcher-test.zip"
+    subscription_quantity: 10
+    content_access_mode: "org_environment"  # Use "entitlement" for legacy mode
+
+  vars_prompt:
+    - name: rhsm_username
+      prompt: "Enter your Red Hat Customer Portal username"
+      private: false
+
+    - name: rhsm_password
+      prompt: "Enter your Red Hat Customer Portal password"
+      private: true
+
+    - name: aap_pool_id
+      prompt: "Enter the AAP subscription pool ID"
+      private: false
+
+  tasks:
+    - name: Create manifest and attach AAP subscriptions
+      redhat.satellite.redhat_manifest:
+        name: "{{ manifest_name if not manifest_uuid else omit }}"
+        uuid: "{{ manifest_uuid if manifest_uuid else omit }}"
+        username: "{{ rhsm_username }}"
+        password: "{{ rhsm_password }}"
+        pool_id: "{{ aap_pool_id }}"
+        quantity: "{{ subscription_quantity }}"
+        pool_state: present
+        state: present
+        path: "{{ manifest_path }}"
+        content_access_mode: "{{ content_access_mode }}"
+        validate_certs: false
+      register: manifest_result
+
+    - name: Display manifest information
+      ansible.builtin.debug:
+        msg:
+          - "Manifest UUID: {{ manifest_result.uuid }}"
+          - "Manifest downloaded to: {{ manifest_path }}"
+          - "Subscriptions attached: {{ subscription_quantity }}"

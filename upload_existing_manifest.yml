@@ -1,0 +1,48 @@
+---
+# Use this playbook when you've already downloaded the manifest from
+# https://console.redhat.com/subscriptions/manifests
+
+- name: Upload existing manifest to AAP
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    manifest_path: "{{ playbook_dir }}/aap_sub_fetcher-test.zip"
+
+  vars_prompt:
+    - name: aap_host
+      prompt: "Enter your AAP hostname (e.g., aap.example.com)"
+      private: false
+
+    - name: aap_username
+      prompt: "Enter your AAP username"
+      private: false
+
+    - name: aap_password
+      prompt: "Enter your AAP password"
+      private: true
+
+  tasks:
+    - name: Verify manifest file exists
+      ansible.builtin.stat:
+        path: "{{ manifest_path }}"
+      register: manifest_file
+
+    - name: Fail if manifest not found
+      ansible.builtin.fail:
+        msg: "Manifest file not found at {{ manifest_path }}. Download it from https://console.redhat.com/subscriptions/manifests"
+      when: not manifest_file.stat.exists
+
+    - name: Upload manifest to AAP
+      ansible.controller.license:
+        manifest: "{{ manifest_path }}"
+        controller_host: "{{ aap_host }}"
+        controller_username: "{{ aap_username }}"
+        controller_password: "{{ aap_password }}"
+        validate_certs: false
+      register: license_result
+
+    - name: Display result
+      ansible.builtin.debug:
+        msg: "Manifest successfully uploaded to {{ aap_host }}"

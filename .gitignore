@@ -1,0 +1,17 @@
+# Credentials (use *.example files as templates)
+vars/credentials.yml
+vars/aap_credentials.yml
+ansible.cfg
+
+# Downloaded collections
+collections/ansible_collections/
+
+# Downloaded manifests
+*.zip
+
+# Ansible retry files
+*.retry
+
+# Python
+__pycache__/
+*.py[cod]

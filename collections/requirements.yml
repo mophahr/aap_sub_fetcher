@@ -1,0 +1,6 @@
+---
+collections:
+  - name: redhat.satellite
+    source: https://console.redhat.com/api/automation-hub/
+  - name: ansible.controller
+    source: https://console.redhat.com/api/automation-hub/
