@@ -12,7 +12,6 @@ Ansible playbooks to manage Red Hat Ansible Automation Platform subscription man
 
 ## Requirements
 
-- Ansible 2.9+
 - `redhat.satellite` collection (for `create_aap_manifest.yml` and `list_available_pools.yml`)
 - `ansible.controller` collection (for `upload_existing_manifest.yml`)
 
@@ -38,6 +37,8 @@ ansible-galaxy collection install -r collections/requirements.yml
 ## Usage
 
 ### Create manifest via API (requires portal username/password)
+
+Create a `vars/credentials.yml` file (see `vars/credentials.yml.example`), then run:
 
 ```bash
 ansible-playbook create_aap_manifest.yml -e @vars/credentials.yml
@@ -78,14 +79,6 @@ manifest_uuid: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 
 ```bash
 ansible-playbook upload_existing_manifest.yml -e @vars/aap_credentials.yml
-```
-
-### Example: Using a variables file
-
-Create a `vars/credentials.yml` file (see `vars/credentials.yml.example`), then run:
-
-```bash
-ansible-playbook create_aap_manifest.yml -e @vars/credentials.yml
 ```
 
 ### Example: Using Ansible Vault for secrets
